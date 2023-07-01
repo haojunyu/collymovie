@@ -8,27 +8,21 @@ import (
 	"strings"
 	"time"
 
+	"collymovie"
+
 	"github.com/gocolly/colly"
 )
 
-// Movie 电影存储结构体
-type Movie struct {
-	Idx    string `json:"idx"`    // 排行榜序号
-	Title  string `json:"title"`  // 电影名称
-	Year   string `json:"year"`   // 电影年份
-	Info   string `json:"info"`   // 电影信息
-	Rating string `json:"rating"` // 电影排名
-	URL    string `json:"url"`    // 电影URL
-}
-
 func main() {
+
 	t := time.Now()
 
 	// Instantiate default collector
 	c := colly.NewCollector(
 		//colly.Debugger(&debug.LogDebugger{}),
-		//colly.Async(true),
-		colly.AllowedDomains("movie.douban.com"),
+		colly.Async(true),
+		//colly.AllowedDomains("movie.douban.com"),
+		colly.UserAgent("Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Mobile Safari/537.36"),
 
 		// colly.URLFilters(
 		// 	regexp.MustCompile("https://movie\\.douban\\.com/subject/.+$"),
@@ -36,11 +30,11 @@ func main() {
 		// ),
 	)
 
-	// c.Limit(&colly.LimitRule{
-	// 	DomainGlob:  "",
-	// 	Delay:       1 * time.Second,
-	// 	RandomDelay: 1 * time.Second,
-	// })
+	c.Limit(&colly.LimitRule{
+		DomainGlob:  "",
+		Delay:       1 * time.Second,
+		RandomDelay: 5 * time.Second,
+	})
 
 	// 设置随机头
 	//extensions.RandomUserAgent(c)
@@ -48,6 +42,8 @@ func main() {
 
 	// Create another collector to scrape movie/celebrity details
 	movieCollector := c.Clone()
+	//colly.URLFilters(regexp.MustCompile("https://movie\\.douban\\.com/subject/[0-9]{8,10}/$"))
+	//movieCollector.URLFilters = []*regexp.Regexp{regexp.MustCompile("https://movie\\.douban\\.com/subject/[0-9]{8,10}/$")}
 	//celebrityCollector := c.Clone()
 
 	// mongodb 作数据存储
@@ -85,6 +81,10 @@ func main() {
 		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 	})
 
+	c.OnResponse(func(r *colly.Response) {
+		fmt.Println("Response", r.StatusCode, string(r.Body))
+	})
+
 	// 遍历页面中的链接并访问
 	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		link := e.Attr("href")
@@ -99,7 +99,7 @@ func main() {
 		// 访问链接，使用e.Request.Visit会记录深度
 		//c.Visit(e.Request.AbsoluteURL(link))
 		e.Request.Visit(link)
-		fmt.Printf("Link found end: %q -> %s\n", e.Text, link)
+		//fmt.Printf("Link found end: %q -> %s\n", e.Text, link)
 	})
 
 	movieCollector.OnHTML("div#content", func(e *colly.HTMLElement) {
@@ -111,7 +111,7 @@ func main() {
 		info = strings.ReplaceAll(info, " ", "")
 		info = strings.ReplaceAll(info, "\n", "; ")
 		rating := selection.Find("strong.rating_num").Text()
-		movie := Movie{
+		movie := collymovie.Movie{
 			Idx:    idx,
 			Title:  title,
 			Year:   year,
@@ -134,7 +134,8 @@ func main() {
 	})
 
 	// Start scraping on https://hackerspaces.org
-	c.Visit("https://movie.douban.com/top250")
+	//c.Visit("https://movie.douban.com/top250")
+	c.Visit("https://www.baidu.com")
 	c.Wait()
 	fmt.Printf("花费时间:%s", time.Since(t))
 }

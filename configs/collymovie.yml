@@ -1,0 +1,16 @@
+application:
+  host: 0.0.0.0
+  ishttps: false
+  mode: dev
+  port: "8000"
+database:
+  dbname: wxmallgo
+  dbtype: mysql
+  host: rm-uf63m528neo9e897d125010.mysql.rds.aliyuncs.com
+  initsql: configs/mysql.sql
+  password: wxmallgo
+  port: 3306
+  username: wxmallgo
+log:
+  dir: logs
+  operdb: false
